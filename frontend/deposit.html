@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eCO₂nomy</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="fav3.png" />
+</head>
+<body>
+
+<div class="main-content"> <!--wrap the whole thing so I can fix the footer to the bottom-->
+
+
+<h1>e<span class="co2-text">CO₂</span>nomy</h1>
+<p class="tagline">What did you do to save the planet today?</p>
+
+<div class="auth-container">
+  <div class="auth-buttons" id="auth-buttons">
+    <button class="auth-btn login-btn" onclick="showLogin()">Log in</button>
+    <button class="auth-btn signup-btn" onclick="showSignup()">Open an account</button>
+  </div>
+  <div class="auth-buttons" id="logged-in-buttons" style="display: none;">
+    <button class="auth-btn" onclick="window.location.href='index.html'">🏆 Leaderboard</button>
+    <button class="auth-btn" onclick="window.location.href='statement.html'">☰ Your Statement</button>
+    <button class="auth-btn" onclick="handleLogout()">Log out ⎋</button>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('loginModal')">&times;</span>
+    <h2>Log in to eCO₂nomy</h2>
+    <form onsubmit="handleLogin(event)">
+      <label for="loginUsername">Username</label>
+      <input type="text" id="loginUsername" required>
+      
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" required>
+      
+      <button type="submit" class="submit-btn">Log in</button>
+    </form>
+  </div>
+</div>
+
+<!-- Signup Modal -->
+<div id="signupModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('signupModal')">&times;</span>
+    <h2>Open an account</h2>
+    <form onsubmit="handleSignup(event)">
+      <label for="signupUsername">Username</label>
+      <input type="text" id="signupUsername" required>
+      
+      <label for="signupPassword">Password</label>
+      <input type="password" id="signupPassword" required>
+      
+      <label for="signupPasswordConfirm">Confirm Password</label>
+      <input type="password" id="signupPasswordConfirm" required>
+      
+      <button type="submit" class="submit-btn">Create account</button>
+    </form>
+  </div>
+</div>
+
+  <div class="input-container">
+    <!-- Activity Selector -->
+    <label for="activityType">Select Activity:</label>
+    <select id="activityType">
+      <option value="steps">Walking (steps)</option>
+      <option value="cycling">Cycling (km)</option>
+      <option value="meeting">Walking Meeting (minutes)</option>
+      <option value="stairs">Stairs (floors climbed)</option>
+    </select>
+
+    <!-- Value Input -->
+    <label id="valueLabel" for="activityValue">Enter Value:</label>
+    <input type="number" id="activityValue" placeholder="e.g. 5000">
+
+    <!-- Date Input -->
+    <label for="activityDate">Date completed:</label>
+    <input type="date" id="activityDate">
+  </div>
+
+  <div id="results-container"></div>
+
+  <script>
+    // Check if user is logged in
+    function checkLoginStatus() {
+      const cookies = document.cookie.split(';');
+      const isLoggedIn = cookies.some(cookie => cookie.trim().startsWith('customer_id='));
+      
+      if (isLoggedIn) {
+        document.getElementById('auth-buttons').style.display = 'none';
+        document.getElementById('logged-in-buttons').style.display = 'flex';
+      } else {
+        document.getElementById('auth-buttons').style.display = 'flex';
+        document.getElementById('logged-in-buttons').style.display = 'none';
+      }
+    }
+
+    // Check login status on page load
+    window.addEventListener('DOMContentLoaded', checkLoginStatus);
+
+    function showLogin() {
+      document.getElementById('loginModal').style.display = 'flex';
+    }
+
+    function showSignup() {
+      document.getElementById('signupModal').style.display = 'flex';
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+      if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+      }
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      fetch('http://localhost:3000/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ username, password })
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => {
+            throw new Error(err.error || 'Login failed');
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Login successful:', data);
+        alert(`Welcome back, ${data.username}!`);
+        closeModal('loginModal');
+        checkLoginStatus();
+      })
+      .catch(error => {
+        console.error('Login error:', error);
+        alert(`Login failed: ${error.message}`);
+      });
+    }
+
+    function handleLogout() {
+      document.cookie = 'customer_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      alert('You have been logged out');
+      window.location.href = 'index.html';
+    }
+
+    function handleSignup(event) {
+      event.preventDefault();
+      const username = document.getElementById('signupUsername').value;
+      const password = document.getElementById('signupPassword').value;
+      const confirmPassword = document.getElementById('signupPasswordConfirm').value;
+      
+      if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+      }
+      
+      console.log('Signup attempt:', username);
+      alert(`Account created successfully! Welcome, ${username}!`);
+      closeModal('signupModal');
+    }
+
+    const activityType = document.getElementById('activityType');
+    const activityValue = document.getElementById('activityValue');
+    const valueLabel = document.getElementById('valueLabel');
+    const activityDate = document.getElementById('activityDate');
+
+    // Check for edit mode (query parameters)
+    let editMode = false;
+    let editDepositId = null;
+    
+    function loadEditData() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const id = urlParams.get('id');
+      const type = urlParams.get('type');
+      const value = urlParams.get('value');
+      const date = urlParams.get('date');
+      
+      if (id && type && value && date) {
+        editMode = true;
+        editDepositId = id;
+        
+        activityType.value = type;
+        activityValue.value = value;
+        activityDate.value = date;
+        
+        // Trigger calculation
+        updatePlaceholder();
+        calculatePoints();
+      }
+    }
+
+    // Load edit data if present
+    loadEditData();
+
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    if (!editMode) {
+      activityDate.value = today;
+    }
+    activityDate.max = today; // Prevent future dates
+
+    // Validate date selection
+    activityDate.addEventListener('change', function() {
+      const inputValue = this.value;
+      const selectedDate = new Date(inputValue);
+      const todayDate = new Date(today);
+      
+      // Check if the date is valid (not NaN) and the input matches the parsed date
+      const isValidDate = !isNaN(selectedDate.getTime()) && 
+                          selectedDate.toISOString().split('T')[0] === inputValue;
+      
+      if (!isValidDate) {
+        alert('Invalid date selected. Please choose a valid date.');
+        this.value = today;
+        return;
+      }
+      
+      // Check if date is not in the future
+      if (selectedDate > todayDate) {
+        alert('Date cannot be in the future');
+        this.value = today;
+      }
+    });
+
+    function updatePlaceholder() {
+      if (!editMode) {
+        activityValue.value = ''; // clear input only if not in edit mode
+      }
+
+      switch (activityType.value) {
+        case 'steps':
+          activityValue.placeholder = 'e.g. 8000';
+          valueLabel.textContent = 'Enter Steps:';
+          break;
+        case 'cycling':
+          activityValue.placeholder = 'e.g. 3.2';
+          valueLabel.textContent = 'Enter Distance (km):';
+          break;
+        case 'meeting':
+          activityValue.placeholder = 'e.g. 30';
+          valueLabel.textContent = 'Enter Duration (minutes):';
+          break;
+        case 'stairs':
+          activityValue.placeholder = 'e.g. 5';
+          valueLabel.textContent = 'Enter Floors Climbed:';
+          break;
+        default:
+          activityValue.placeholder = 'Enter value';
+          valueLabel.textContent = 'Enter Value:';
+      }
+
+      document.getElementById('results-container').innerHTML = '';
+    }
+
+    activityType.addEventListener('change', updatePlaceholder);
+
+    function calculatePoints() {
+      const type = activityType.value;
+      const value = parseFloat(activityValue.value);
+
+      if (isNaN(value) || value <= 0) {
+        document.getElementById('results-container').innerHTML = '';
+        return;
+      }
+
+      let ecoPoints = 0, healthPoints = 0, totalPoints = 0, co2SavedKg = 0;
+      let extraMessage = "";
+
+      // Constants
+      const CAR_CO2_PER_KM = 0.192;
+      const STEP_LENGTH_KM = 0.0008;
+      const ELEVATOR_CO2_PER_FLOOR = 0.000116;
+
+      switch (type) {
+        case 'steps':
+          const kmWalked = value * STEP_LENGTH_KM;
+          co2SavedKg = kmWalked * CAR_CO2_PER_KM;
+          ecoPoints = co2SavedKg * 10;
+          healthPoints = value * 0.001;
+          extraMessage = `Estimated distance walked: ${kmWalked.toFixed(2)} km`;
+          break;
+        case 'cycling':
+          co2SavedKg = value * CAR_CO2_PER_KM;
+          ecoPoints = co2SavedKg * 12;
+          healthPoints = value * 0.5;
+          extraMessage = `Distance cycled: ${value.toFixed(2)} km`;
+          break;
+        case 'meeting':
+          const kmEquivalent = value * 0.07;
+          co2SavedKg = kmEquivalent * CAR_CO2_PER_KM;
+          ecoPoints = co2SavedKg * 8;
+          healthPoints = value * 0.05;
+          extraMessage = `Approx walking distance: ${kmEquivalent.toFixed(2)} km`;
+          break;
+        case 'stairs':
+          co2SavedKg = value * ELEVATOR_CO2_PER_FLOOR;
+          ecoPoints = value * 0.5;
+          healthPoints = value * 1.2;
+          extraMessage = `Estimated elevator energy avoided: ${(co2SavedKg * 1000).toFixed(2)} g CO₂`;
+          break;
+      }
+
+      totalPoints = ecoPoints + healthPoints;
+
+      // Store calculated values globally for deposit
+      window.currentCalculation = {
+        type: type,
+        value: value,
+        ecoPoints: ecoPoints,
+        healthPoints: healthPoints,
+        totalPoints: totalPoints,
+        co2SavedG: co2SavedKg * 1000
+      };
+
+      const buttonText = editMode ? 'Update' : 'Deposit';
+
+      document.getElementById('results-container').innerHTML = `
+        <div class="result-card">
+          <h2>Activity Summary</h2>
+          <div class="result-row"><span class="result-label">Activity:</span> ${type}</div>
+          <div class="result-row"><span class="result-label">Eco Points:</span> ${ecoPoints.toFixed(2)}</div>
+          <div class="result-row"><span class="result-label">Health Points:</span> ${healthPoints.toFixed(2)}</div>
+          <div class="result-row"><span class="result-label">CO₂ Saved:</span> ${(co2SavedKg * 1000).toFixed(2)} g</div>
+          <div class="result-row">${extraMessage}</div>
+          <div class="total-points">Total Points: ${totalPoints.toFixed(2)}</div>
+          <button class="deposit-btn" onclick="depositActivity()">${buttonText}</button>
+        </div>
+      `;
+    }
+
+    function getCustomerId() {
+      const cookies = document.cookie.split(';');
+      const customerCookie = cookies.find(cookie => cookie.trim().startsWith('customer_id='));
+      if (customerCookie) {
+        return customerCookie.split('=')[1];
+      }
+      return null;
+    }
+
+    function depositActivity() {
+      const customerId = getCustomerId();
+      
+      if (!customerId) {
+        alert('Please log in to deposit activities');
+        return;
+      }
+
+      if (!window.currentCalculation) {
+        alert('Please calculate an activity first');
+        return;
+      }
+
+      const calc = window.currentCalculation;
+      const depositDate = activityDate.value;
+      const timestamp = new Date(depositDate).toISOString();
+
+      const depositData = {
+        customer_id: customerId,
+        timestamp: timestamp,
+        deposit_date: depositDate,
+        deposit_type: calc.type,
+        raw_value: calc.value,
+        estimated_co2_g: calc.co2SavedG,
+        points_eco: calc.ecoPoints,
+        points_health: calc.healthPoints,
+        points_total: calc.totalPoints
+      };
+
+      if (editMode && editDepositId) {
+        // Update existing deposit
+        fetch(`http://localhost:3000/deposits/${editDepositId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(depositData)
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(err => {
+              throw new Error(err.error || 'Update failed');
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Update successful:', data);
+          alert('Activity updated successfully!');
+          // Redirect back to history
+          window.location.href = 'statement.html';
+        })
+        .catch(error => {
+          console.error('Update error:', error);
+          alert(`Update failed: ${error.message}`);
+        });
+      } else {
+        // Create new deposit
+        fetch('http://localhost:3000/deposits/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(depositData)
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(err => {
+              throw new Error(err.error || 'Deposit failed');
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Deposit successful:', data);
+          alert('Activity deposited successfully!');
+          // Clear the form
+          activityValue.value = '';
+          activityDate.value = new Date().toISOString().split('T')[0];
+          document.getElementById('results-container').innerHTML = '';
+          window.currentCalculation = null;
+        })
+        .catch(error => {
+          console.error('Deposit error:', error);
+          alert(`Deposit failed: ${error.message}`);
+        });
+      }
+    }
+
+    // Live update as user types
+    activityValue.addEventListener('input', calculatePoints);
+  </script>
+
+</div> <!--wrap the whole thing so I can fix the footer to the bottom-->
+
+
+<div id="footer-container"></div>
+<script>
+  fetch('footer.html')
+    .then(response => response.text())
+    .then(html => document.getElementById('footer-container').innerHTML = html);
+</script>
+
+
+    </body>
+</html>

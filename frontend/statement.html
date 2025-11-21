@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eCO₂nomy</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="fav3.png" />
+</head>
+<body>
+
+<div class="main-content"> <!--wrap the whole thing so I can fix the footer to the bottom-->
+
+<h1>e<span class="co2-text">CO₂</span>nomy</h1>
+<p class="tagline">Deposit History - Your eco-statement</p>
+
+<div class="auth-container">
+  <div class="auth-buttons" id="auth-buttons">
+    <button class="auth-btn login-btn" onclick="showLogin()">Log in</button>
+    <button class="auth-btn signup-btn" onclick="showSignup()">Open an account</button>
+  </div>
+  <div class="auth-buttons" id="logged-in-buttons" style="display: none;">
+    <button class="auth-btn" onclick="window.location.href='index.html'">🏆 Leaderboard</button>
+    <button class="auth-btn" onclick="window.location.href='deposit.html'">➕ Make a Deposit</button>
+    <button class="auth-btn" onclick="handleLogout()">Log out ⎋</button>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('loginModal')">&times;</span>
+    <h2>Log in to eCO₂nomy</h2>
+    <form onsubmit="handleLogin(event)">
+      <label for="loginUsername">Username</label>
+      <input type="text" id="loginUsername" required>
+      
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" required>
+      
+      <button type="submit" class="submit-btn">Log in</button>
+    </form>
+  </div>
+</div>
+
+<!-- Signup Modal -->
+<div id="signupModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('signupModal')">&times;</span>
+    <h2>Open an account</h2>
+    <form onsubmit="handleSignup(event)">
+      <label for="signupUsername">Username</label>
+      <input type="text" id="signupUsername" required>
+      
+      <label for="signupPassword">Password</label>
+      <input type="password" id="signupPassword" required>
+      
+      <label for="signupPasswordConfirm">Confirm Password</label>
+      <input type="password" id="signupPasswordConfirm" required>
+      
+      <button type="submit" class="submit-btn">Create account</button>
+    </form>
+  </div>
+</div>
+
+<div class="table-container">
+  <table id="history-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Activity</th>
+        <th>Amount</th>
+        <th>Eco Points</th>
+        <th>Health Points</th>
+        <th>CO₂ Saved (g)</th>
+        <th>Total Points</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="history-body">
+      <!-- Sample data was here - now replaced with my actual data -->
+    </tbody>
+  </table>
+</div>
+
+<script>
+
+  // Get customer ID from cookie
+  function getCustomerId() {
+    const cookies = document.cookie.split(';');
+    const customerCookie = cookies.find(cookie => cookie.trim().startsWith('customer_id='));
+    if (customerCookie) {
+      return customerCookie.split('=')[1];
+    }
+    return null;
+  }
+
+  // Load deposit history
+  async function loadHistory() {
+    const customerId = getCustomerId();
+    
+    if (!customerId) {
+      document.getElementById('history-body').innerHTML = '<tr><td colspan="8">Please log in to view your deposit history</td></tr>';
+      return;
+    }
+
+    const tbody = document.getElementById('history-body');
+    tbody.innerHTML = '<tr><td colspan="8">Loading your deposit history...</td></tr>';
+    
+    try {
+      const res = await fetch(`http://localhost:3000/statement/${customerId}`, {
+        credentials: 'include'
+      });
+      
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      
+      const data = await res.json();
+      
+      tbody.innerHTML = '';
+      
+      if (data && data.length > 0) {
+        data.forEach(deposit => {
+          const row = tbody.insertRow();
+          
+          // Format date
+          const date = new Date(deposit.deposit_date || deposit.timestamp);
+          row.insertCell(0).textContent = date.toISOString().split('T')[0];
+          
+          // Activity type
+          row.insertCell(1).textContent = formatActivityType(deposit.deposit_type);
+          
+          // Amount
+          row.insertCell(2).textContent = formatAmount(deposit.deposit_type, deposit.raw_value);
+          
+          // Points
+          row.insertCell(3).textContent = (deposit.points_eco || 0).toFixed(2);
+          row.insertCell(4).textContent = (deposit.points_health || 0).toFixed(2);
+          row.insertCell(5).textContent = (deposit.estimated_co2_g || 0).toFixed(2);
+          row.insertCell(6).textContent = (deposit.points_total || 0).toFixed(2);
+          
+          // Actions
+          const actionsCell = row.insertCell(7);
+          actionsCell.className = 'action-buttons';
+          actionsCell.innerHTML = `
+            <button class="action-btn reinvest-btn" title="Amend your deposit" onclick="reinvestActivity(this, '${deposit.id}')">Reinvest</button>
+            <button class="action-btn withdraw-btn" title="Delete your deposit" onclick="withdrawActivity(this, '${deposit.id}', '${deposit.timestamp}')">Withdraw</button>
+          `;
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="8">No deposit history found</td></tr>';
+      }
+    } catch (error) {
+      tbody.innerHTML = `<tr><td colspan="8">Error loading deposit history: ${error.message}</td></tr>`;
+      console.error('Error fetching deposit history:', error);
+    }
+  }
+
+  function formatActivityType(type) {
+    const types = {
+      'steps': 'Walking',
+      'cycling': 'Cycling',
+      'meeting': 'Walking Meeting',
+      'stairs': 'Stairs'
+    };
+    return types[type] || type;
+  }
+
+  function formatAmount(type, value) {
+    const formats = {
+      'steps': `${value} steps`,
+      'cycling': `${value} km`,
+      'meeting': `${value} minutes`,
+      'stairs': `${value} floors`
+    };
+    return formats[type] || value;
+  }
+
+  // Check if user is logged in
+  function checkLoginStatus() {
+    // Check if customer_id cookie exists
+    const cookies = document.cookie.split(';');
+    const isLoggedIn = cookies.some(cookie => cookie.trim().startsWith('customer_id='));
+    
+    if (isLoggedIn) {
+      document.getElementById('auth-buttons').style.display = 'none';
+      document.getElementById('logged-in-buttons').style.display = 'flex';
+      loadHistory(); // Load history when logged in
+    } else {
+      document.getElementById('auth-buttons').style.display = 'flex';
+      document.getElementById('logged-in-buttons').style.display = 'none';
+    }
+  }
+
+  // Check login status on page load
+  window.addEventListener('DOMContentLoaded', checkLoginStatus);
+
+  function showLogin() {
+    document.getElementById('loginModal').style.display = 'flex';
+  }
+
+  function showSignup() {
+    document.getElementById('signupModal').style.display = 'flex';
+  }
+
+  function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+  }
+
+  // Close modal when clicking outside of it
+  window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+      event.target.style.display = 'none';
+    }
+  }
+
+  function handleLogin(event) {
+    event.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    // Call login API
+    fetch('http://localhost:3000/login/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ username, password })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || 'Login failed');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Login successful:', data);
+      alert(`Welcome back, ${data.username}!`);
+      closeModal('loginModal');
+      checkLoginStatus();
+    })
+    .catch(error => {
+      console.error('Login error:', error);
+      alert(`Login failed: ${error.message}`);
+    });
+  }
+
+  function handleLogout() {
+    document.cookie = 'customer_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    alert('You have been logged out');
+    window.location.href = 'index.html';
+  }
+
+  function handleSignup(event) {
+    event.preventDefault();
+    const username = document.getElementById('signupUsername').value;
+    const password = document.getElementById('signupPassword').value;
+    const confirmPassword = document.getElementById('signupPasswordConfirm').value;
+    
+    if (password !== confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+    
+    // Add your signup logic here
+    console.log('Signup attempt:', username);
+    alert(`Account created successfully! Welcome, ${username}!`);
+    closeModal('signupModal');
+  }
+
+  function reinvestActivity(button, depositId) {
+    const row = button.closest('tr');
+    
+    // Get deposit data from the row
+    const date = row.cells[0].textContent;
+    const activityType = row.cells[1].textContent;
+    const amount = row.cells[2].textContent;
+    
+    // Map activity type back to the form value
+    const typeMap = {
+      'Walking': 'steps',
+      'Cycling': 'cycling',
+      'Walking Meeting': 'meeting',
+      'Stairs': 'stairs'
+    };
+    
+    const type = typeMap[activityType] || 'steps';
+    
+    // Extract the numeric value from amount
+    const value = parseFloat(amount);
+    
+    // Redirect to deposit.html with query parameters
+    window.location.href = `deposit.html?id=${depositId}&type=${type}&value=${value}&date=${date}`;
+  }
+
+  function withdrawActivity(button, depositId, timestamp) {
+    const row = button.closest('tr');
+    const date = row.cells[0].textContent;
+    const activity = row.cells[1].textContent;
+    
+    if (confirm(`Are you sure you want to delete the ${activity} activity from ${date}?`)) {
+      // Add your withdraw/delete logic here
+      console.log('Withdraw activity:', { depositId, timestamp, date, activity });
+      
+      // Call delete API
+      fetch(`http://localhost:3000/deposits/${depositId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      .then(response => {
+        if (response.ok) {
+          row.remove();
+          alert('Activity deleted successfully');
+        } else {
+          throw new Error('Failed to delete');
+        }
+      })
+      .catch(error => {
+        console.error('Delete error:', error);
+        alert('Error deleting activity');
+      });
+    }
+  }
+</script>
+
+</div> <!--wrap the whole thing so I can fix the footer to the bottom-->
+
+<div id="footer-container"></div>
+<script>
+  fetch('footer.html')
+    .then(response => response.text())
+    .then(html => document.getElementById('footer-container').innerHTML = html);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Web Application</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <p>This front end calls my API running on port 3000:</p>
+    <button id="fetch-btn">Fetch /accounts</button>
+    <button id="fetch-account-id-btn">Fetch /getAccountById</button>
+    
+    <div id="output">Waiting for data...</div>
+    <script>
+        document
+            .getElementById('fetch-btn')
+            .addEventListener('click', async () => {
+                const output = document.getElementById('output');
+                output.textContent = 'Fetching data...';
+                try {
+                    const res = await fetch('http://localhost:3000/accounts');
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    
+                    const text = await res.text();
+                    output.textContent = text;
+                } catch (error) {
+                    output.textContent = `Error could not reach backend: ${error.message}`;
+                }
+        });
+
+        document
+            .getElementById('fetch-account-id-btn')
+            .addEventListener('click', async () => {
+                const output = document.getElementById('output');
+                output.textContent = 'Fetching data...';
+                try {
+                    const res = await fetch('http://localhost:3000/accounts/1234');
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    
+                    const text = await res.text();
+                    output.textContent = text;
+                } catch (error) {
+                    output.textContent = `Error could not reach backend: ${error.message}`;
+                }
+        });
+    </script>
+
+    </body>
+</html>

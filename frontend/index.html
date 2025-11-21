@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eCO₂nomy</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="fav3.png" />
+</head>
+<body>
+
+<div class="main-content"> <!--wrap the whole thing so I can fix the footer to the bottom-->
+
+<h1>e<span class="co2-text">CO₂</span>nomy</h1>
+<p class="tagline">Bank points, Save carbon, Feel rich</p>
+
+<div class="auth-container">
+  <div class="auth-buttons" id="auth-buttons">
+    <button class="auth-btn login-btn" onclick="showLogin()">Log in</button>
+    <button class="auth-btn signup-btn" onclick="showSignup()">Open an account</button>
+  </div>
+  <div class="auth-buttons" id="logged-in-buttons" style="display: none;">
+    <button class="auth-btn" onclick="window.location.href='statement.html'">☰ Your Statement</button>
+    <button class="auth-btn" onclick="window.location.href='deposit.html'">➕ Make a Deposit</button>
+    <button class="auth-btn" onclick="handleLogout()">Log out ⎋</button>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('loginModal')">&times;</span>
+    <h2>Log in to eCO₂nomy</h2>
+    <form onsubmit="handleLogin(event)">
+      <label for="loginUsername">Username</label>
+      <input type="text" id="loginUsername" required>
+      
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" required>
+      
+      <button type="submit" class="submit-btn">Log in</button>
+    </form>
+  </div>
+</div>
+
+<!-- Signup Modal -->
+<div id="signupModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('signupModal')">&times;</span>
+    <h2>Open an account</h2>
+    <form onsubmit="handleSignup(event)">
+      <label for="signupUsername">Username</label>
+      <input type="text" id="signupUsername" required>
+      
+      <label for="signupPassword">Password</label>
+      <input type="password" id="signupPassword" required>
+      
+      <label for="signupPasswordConfirm">Confirm Password</label>
+      <input type="password" id="signupPasswordConfirm" required>
+      
+      <button type="submit" class="submit-btn">Create account</button>
+    </form>
+  </div>
+</div>
+
+<div class="table-container">
+  <table id="leaderboard">
+    <thead>
+      <tr>
+        <th onclick="sortTable(0)">Username <span class="sort-arrow">↕</span></th>
+        <th onclick="sortTable(1)">Eco Points <span class="sort-arrow">↕</span></th>
+        <th onclick="sortTable(2)">Health Points <span class="sort-arrow">↕</span></th>
+        <th onclick="sortTable(3)">CO₂ Saved (g) <span class="sort-arrow">↕</span></th>
+        <th onclick="sortTable(4)">Total Points <span class="sort-arrow">↕</span></th>
+      </tr>
+    </thead>
+    <tbody id="leaderboard-body">
+      <!-- Sample data was here - now replaced with my actual data -->
+      <!--<tr>
+        <td>Alice</td>
+        <td>245.50</td>
+        <td>120.30</td>
+        <td>1250.00</td>
+        <td>365.80</td>
+      </tr>-->
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let sortDirection = [1, 1, 1, 1, 1]; // 1 for ascending, -1 for descending
+
+  // Check if user is logged in
+  function checkLoginStatus() {
+    // Check if customer_id cookie exists
+    const cookies = document.cookie.split(';');
+    const isLoggedIn = cookies.some(cookie => cookie.trim().startsWith('customer_id='));
+    
+    if (isLoggedIn) {
+      document.getElementById('auth-buttons').style.display = 'none';
+      document.getElementById('logged-in-buttons').style.display = 'flex';
+    } else {
+      document.getElementById('auth-buttons').style.display = 'flex';
+      document.getElementById('logged-in-buttons').style.display = 'none';
+    }
+  }
+
+  // Load leaderboard data on page load
+  async function loadLeaderboard() {
+    const tbody = document.getElementById('leaderboard-body');
+    tbody.innerHTML = '<tr><td colspan="5">Loading data...</td></tr>';
+    
+    try {
+      const res = await fetch('http://localhost:3000/leaderboard/');
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      
+      const data = await res.json();
+      
+      // Clear loading message
+      tbody.innerHTML = '';
+      
+      // Populate table with data
+      if (data && data.length > 0) {
+        data.forEach(item => {
+          const row = tbody.insertRow();
+          row.insertCell(0).textContent = item.username || 'Unknown';
+          row.insertCell(1).textContent = (item.total_points_eco || 0).toFixed(2);
+          row.insertCell(2).textContent = (item.total_points_health || 0).toFixed(2);
+          row.insertCell(3).textContent = (item.total_co2_g || 0).toFixed(2);
+          row.insertCell(4).textContent = (item.total_points || 0).toFixed(2);
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
+      }
+    } catch (error) {
+      tbody.innerHTML = `<tr><td colspan="5">Error loading data: ${error.message}</td></tr>`;
+      console.error('Error fetching leaderboard:', error);
+    }
+  }
+
+  // Load data when page loads
+  window.addEventListener('DOMContentLoaded', () => {
+    checkLoginStatus();
+    loadLeaderboard();
+  });
+
+  function showLogin() {
+    document.getElementById('loginModal').style.display = 'flex';
+  }
+
+  function showSignup() {
+    document.getElementById('signupModal').style.display = 'flex';
+  }
+
+  function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+  }
+
+  // Close modal when clicking outside of it
+  window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+      event.target.style.display = 'none';
+    }
+  }
+
+  function handleLogin(event) {
+    event.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    // Call login API
+    fetch('http://localhost:3000/login/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Important for cookies
+      body: JSON.stringify({ username, password })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || 'Login failed');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Login successful:', data);
+      alert(`Welcome back, ${data.username}!`);
+      closeModal('loginModal');
+      // Update UI to show logged-in buttons
+      checkLoginStatus();
+      loadLeaderboard();
+    })
+    .catch(error => {
+      console.error('Login error:', error);
+      alert(`Login failed: ${error.message}`);
+    });
+  }
+
+  function handleLogout() {
+    // Clear the cookie by setting it to expire
+    document.cookie = 'customer_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    alert('You have been logged out');
+    checkLoginStatus();
+  }
+
+  function handleSignup(event) {
+    event.preventDefault();
+    const username = document.getElementById('signupUsername').value;
+    const password = document.getElementById('signupPassword').value;
+    const confirmPassword = document.getElementById('signupPasswordConfirm').value;
+    
+    if (password !== confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+    
+    // Call signup API
+    fetch('http://localhost:3000/customers/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ 
+        username, 
+        password,
+        settings_json: {}
+      })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || 'Signup failed');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Signup successful:', data);
+      alert(`Account created successfully! Welcome, ${username}!`);
+      closeModal('signupModal');
+      // Optionally auto-login after signup
+      document.getElementById('loginUsername').value = username;
+      document.getElementById('loginPassword').value = password;
+    })
+    .catch(error => {
+      console.error('Signup error:', error);
+      alert(`Signup failed: ${error.message}`);
+    });
+  }
+
+  function sortTable(columnIndex) {
+    console.clear();
+    console.log('=== Sort Function Called: in case I need a server side sort, but just doing client side html/js ===');
+    console.log('Column Index:', columnIndex);
+    
+    const columnNames = ['Username', 'Eco Points', 'Health Points', 'CO₂ Saved', 'Total Points'];
+    console.log('Column Name:', columnNames[columnIndex]);
+    
+    const table = document.getElementById('leaderboard');
+    const tbody = document.getElementById('leaderboard-body');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Toggle sort direction
+    sortDirection[columnIndex] *= -1;
+    const direction = sortDirection[columnIndex] === 1 ? 'ascending' : 'descending';
+    console.log('Sort Direction:', direction);
+    
+    rows.sort((a, b) => {
+      let aValue = a.cells[columnIndex].textContent.trim();
+      let bValue = b.cells[columnIndex].textContent.trim();
+      
+      // Check if values are numeric
+      if (columnIndex > 0) {
+        aValue = parseFloat(aValue);
+        bValue = parseFloat(bValue);
+        return (aValue - bValue) * sortDirection[columnIndex];
+      } else {
+        // String comparison for username
+        return aValue.localeCompare(bValue) * sortDirection[columnIndex];
+      }
+    });
+    
+    
+    // Clear and re-append sorted rows
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update sort arrows
+    updateSortArrows(columnIndex);
+    
+    console.log({
+      endpoint: '/api/leaderboard',
+      method: 'GET',
+      params: {
+        sortBy: columnNames[columnIndex].toLowerCase().replace(/\s+/g, '_'),
+        order: direction,
+        columnIndex: columnIndex
+      }
+    });
+    console.log('Example URL: /api/leaderboard?sortBy=' + columnNames[columnIndex].toLowerCase().replace(/\s+/g, '_') + '&order=' + direction);
+    console.log('=========================\n');
+  }
+  
+  function updateSortArrows(activeColumn) {
+    const arrows = document.querySelectorAll('.sort-arrow');
+    arrows.forEach((arrow, index) => {
+      if (index === activeColumn) {
+        arrow.textContent = sortDirection[activeColumn] === 1 ? '↑' : '↓';
+        arrow.style.opacity = '1';
+      } else {
+        arrow.textContent = '↕';
+        arrow.style.opacity = '0.3';
+      }
+    });
+  }
+</script>
+
+</div> <!--wrap the whole thing so I can fix the footer to the bottom-->
+
+<div id="footer-container"></div>
+<script>
+  fetch('footer.html')
+    .then(response => response.text())
+    .then(html => document.getElementById('footer-container').innerHTML = html);
+</script>
+
+</body>
+</html>
