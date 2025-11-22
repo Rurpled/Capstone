@@ -165,9 +165,9 @@ DELETE http://localhost:3000/deposits/{id}
 ```
 *Replace `{id}` with the deposit UUID* 
 
-<img width="1409" alt="Screenshot 2025-11-20 at 13 17 10" src="https://git.generalassemb.ly/gordonjensen/Capstone/assets/55945/a56e4060-cce8-488d-a041-f2d34a9b7ed0">
+<img width="2818" height="2126" alt="a56e4060-cce8-488d-a041-f2d34a9b7ed0" src="https://github.com/user-attachments/assets/b954c8e3-d9c2-4256-9bc1-930a4ce88584" />
 
-<img width="606" alt="Screenshot 2025-11-20 at 13 19 05" src="https://git.generalassemb.ly/gordonjensen/Capstone/assets/55945/e0fa3f0f-d5ad-4a8d-8c5d-28101ca7362c">
+<img width="1212" height="1762" alt="e0fa3f0f-d5ad-4a8d-8c5d-28101ca7362c" src="https://github.com/user-attachments/assets/0b23329c-60b9-4d26-9913-12443969d051" />
 
-<img width="1073" alt="Screenshot 2025-11-20 at 13 19 22" src="https://git.generalassemb.ly/gordonjensen/Capstone/assets/55945/5f3a7c8f-b0f8-4a32-8210-df615631d83e">
+<img width="2146" height="926" alt="5f3a7c8f-b0f8-4a32-8210-df615631d83e" src="https://github.com/user-attachments/assets/87c1a1a0-3d38-4458-836a-0d1fafe1ced5" />
 
