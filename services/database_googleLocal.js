@@ -4,8 +4,8 @@ import { Datastore } from '@google-cloud/datastore';
 
 // Connect to local Datastore emulator
 const datastore = new Datastore({
-  projectId: 'solid-solstice-477012-c9',
-  // apiEndpoint: 'localhost:8081'
+  projectId: 'local-dev-project',
+  apiEndpoint: 'localhost:8081'
 });
 
 export default datastore;
