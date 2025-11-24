@@ -6,16 +6,83 @@ Customers deposit their eco-friendly actions such as walking, cycling, climbing 
 
 ---
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14+)
+- Google Cloud SDK
+- GCP account with billing enabled
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Rurpled/Capstone.git
+   cd Capstone
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Authenticate with Google Cloud**
+   ```bash
+   gcloud auth application-default login
+   ```
+   This creates credentials that your local app will use to access Google Cloud Datastore.
+
+4. **Configure database connection** (in `services/database.js`)
+   
+   **For Cloud (Production):**
+   ```javascript
+   const datastore = new Datastore({
+     projectId: 'solid-solstice-477012-c9',
+     // No apiEndpoint needed - uses production GCP
+   });
+   ```
+   
+   **For Local Emulator:**
+   ```javascript
+   const datastore = new Datastore({
+     projectId: 'local-dev-project',
+     apiEndpoint: 'localhost:8081'
+   });
+   ```
+
+5. **Start the backend server**
+   ```bash
+   npm run dev
+   ```
+   Server runs on `http://localhost:3000`
+
+6. **Start the frontend** (in a separate terminal)
+   ```bash
+   cd frontend
+   python3 -m http.server 8080
+   ```
+   Frontend runs on `http://localhost:8080`
+
+### GCP Permissions Required
+
+To run this project, you need the following IAM roles on the GCP project:
+- **Datastore User** (`roles/datastore.user`) - Read/write access to Datastore
+- **Datastore Viewer** (`roles/datastore.viewer`) - Optional, for viewing data in console
+
+---
+
 ## Local Development Setup
 
-### Database Emulator
+### Database Options
 
-**Google Cloud Datastore (Current):**
+**Google Cloud Datastore Emulator (Local Testing):**
 ```bash
 gcloud beta emulators datastore start --host-port=localhost:8081
 ```
+Then update `database.js` to include `apiEndpoint: 'localhost:8081'`
 
-**DynamoDB Local (Alternative):**
+**DynamoDB Local (Legacy - Alternative):**
 ```bash
 docker run -d --name dynamodb-local -p 8000:8000 instructure/dynamo-local-admin
 ```
@@ -64,9 +131,10 @@ docker run -d --name dynamodb-local -p 8000:8000 instructure/dynamo-local-admin
 ## Tech Stack
 
 - **Backend**: Node.js + Express
-- **Database**: AWS DynamoDB
+- **Database**: Google Cloud Datastore
 - **Frontend**: HTML, CSS, JavaScript
-- **Infrastructure**: Terraform (for AWS resources)
+- **Infrastructure**: Terraform (for GCP resources)
+- **Authentication**: Google Cloud Application Default Credentials
 
 ---
 
